@@ -1,15 +1,17 @@
 import pygame
 import random
+from math import cos, sin, pi
 
 WIN_W = 1800
 WIN_H = 1000
 BALL_SIZE = 15
 ball_vel = 20
-PAD_H = 180
+PAD_H = 200
 Ball_img = pygame.transform.scale2x(pygame.image.load("Pong.png"))
 Ball_img = pygame.transform.scale(Ball_img, (BALL_SIZE*2,BALL_SIZE*2))
 Paddle_img = pygame.transform.scale(pygame.image.load("PongPlayer.png"), (20, PAD_H))
-PAD_S = 15
+PAD_S = 10
+check_delay = 5
 
 win = pygame.display.set_mode((WIN_W, WIN_H))
 pygame.display.set_caption("Pong")
@@ -28,8 +30,8 @@ class Paddle1:
 
 	def draw(self):
 		global ball
-		if ball.y >= 40 and ball.y <= WIN_H - PAD_H - 40:
-			self.y = ball.y
+		if ball.y >= 40 + PAD_H/2 and ball.y <= WIN_H - PAD_H/2 - 40:
+			self.y = round(ball.y - PAD_H/2)
 		win.blit(Paddle_img, (self.x, self.y))
 
 	def get_mask(self):
@@ -61,6 +63,7 @@ class Ball:
 	def __init__(self, x, y):
 		self.x = x
 		self.y = y
+		self.check_delay = check_delay
 
 		global ball_vel
 		self.yvel = round(random.randint(0,ball_vel*100) / 200)
@@ -84,13 +87,48 @@ class Ball:
 
 		pong2mask = paddle2.get_mask()
 		pong1mask = paddle1.get_mask()
-		if mask.overlap(pong1mask, (paddle1.x-self.x, paddle1.y-self.y)):
-			self.xvel = -self.xvel
 
+		alpha = 0
 
-		elif mask.overlap(pong2mask, (paddle2.x-self.x, paddle2.y-self.y)):
-			self.xvel = -self.xvel
+		if self.check_delay == 0:
 
+			if mask.overlap(pong1mask, (paddle1.x-self.x, paddle1.y-self.y)):
+
+				section = PAD_H / 8
+				alphas = [-45, -30, -15, 0, 0, 15, 30, 45]
+				for sect in range(8):
+					if self.y <= paddle1.y + (sect+1) * section:
+						alpha = alphas[sect]*2*pi/360
+						break
+
+				#Simple
+				# self.xvel = -self.xvel
+				#Real
+				self.xvel = int(cos(alpha) * ball_vel)
+				self.yvel = int(sin(alpha) * ball_vel)
+				print("pad1:", alpha, ":", self.xvel, self.yvel)
+				self.check_delay = check_delay
+
+			elif mask.overlap(pong2mask, (paddle2.x-self.x, paddle2.y-self.y)):
+
+				section = PAD_H / 8
+				alphas = [-45, -30, -15, 0, 0, 15, 30, 45]
+				for sect in range(8):
+					if self.y <= paddle2.y + (sect+1) * section:
+						alpha = alphas[sect]*2*pi/360
+						break
+
+				#Simple
+				# self.xvel = -self.xvel
+				#Real
+				self.xvel = int(-cos(alpha) * ball_vel)
+				self.yvel = int(sin(alpha) * ball_vel)
+
+				print("pad2:",alpha, ":", self.xvel, self.yvel)
+				self.check_delay = check_delay
+
+		else:
+			self.check_delay -= 1
 		
 
 		self.x += self.xvel
