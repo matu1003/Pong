@@ -12,7 +12,7 @@ STAT_FONT = pygame.font.SysFont("arial", 200)
 WIN_W = 1500
 WIN_H = 1000
 BALL_SIZE = 8
-ball_vel_start = 25
+ball_vel_start = 20
 ball_vel = ball_vel_start
 PAD_H = 75
 Ball_img = pygame.transform.scale2x(pygame.image.load("Pong.png"))
@@ -107,7 +107,7 @@ class Ball:
 		win.blit(Ball_img, (self.x, self.y))
 
 	def move(self):
-		if self.y < 30 or self.y > WIN_H - 30 - 2*BALL_SIZE:
+		if (self.y < 30 and self.yvel < 0) or (self.y > WIN_H - 30 - 2*BALL_SIZE and self.yvel > 0):
 			self.yvel = -self.yvel
 
 		mask = pygame.mask.from_surface(Ball_img)
@@ -226,12 +226,12 @@ def step(action):
 	reward = 0
 
 
-	if ball.x <= 0:
+	if ball.x <= -20:
 		scores[1] += 1
 		reward = 0.5
 		done = True
 
-	elif ball.x >= WIN_W:
+	elif ball.x >= WIN_W+20:
 		scores[0] += 1
 		reward = -5
 		done = True
@@ -243,6 +243,10 @@ def step(action):
 
 	if act == False:
 		reward -= 0.5
+
+	if strokes == 10 and ball_vel <= 32:
+		ball_vel += 1
+		strokes = 0
 	return obs, float(reward), done
 
 

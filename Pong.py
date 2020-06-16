@@ -7,8 +7,9 @@ STAT_FONT = pygame.font.SysFont("arial", 200)
 WIN_W = 1500
 WIN_H = 1000
 BALL_SIZE = 10
-ball_vel = 25
-PAD_H = 150
+ball_vel_start = 20
+ball_vel = ball_vel_start
+PAD_H = 100
 Ball_img = pygame.transform.scale2x(pygame.image.load("Pong.png"))
 Ball_img = pygame.transform.scale(Ball_img, (BALL_SIZE*2,BALL_SIZE*2))
 Paddle_img = pygame.transform.scale(pygame.image.load("PongPlayer.png"), (10, PAD_H))
@@ -32,7 +33,8 @@ class Paddle1:
 		self.y = y
 		self.x = 20
 		win.blit(Paddle_img, (self.x, self.y))
-
+		self.next_check = 10
+		self.pred_y = WIN_H/2
 	def draw(self):
 		win.blit(Paddle_img, (self.x, self.y))
 
@@ -48,11 +50,39 @@ class Paddle1:
 			self.y += PAD_S1
 
 	def move(self):
-		global ball_vel
-		if self.y < ball.y:
+		global ball
+		if ball.xvel >= 0:
+			self.next_check = 1
+			self.pred_y = WIN_H/2
+
+		elif ball.yvel == 0:
+			self.pred_y = ball.y
+		elif self.next_check == 0:
+			x_sim = ball.x
+			y_sim = ball.y
+			xvel = ball.xvel
+			yvel = ball.yvel
+			while x_sim >= 30:
+				y_arr = 30
+				if yvel > 0:
+					y_arr = WIN_H - 30
+				x_sim += ((y_arr-y_sim)/yvel) * xvel
+				yvel = -yvel
+				y_sim = y_arr
+			self.pred_y =  abs(((30-x_sim)/xvel) * yvel)
+			if y_sim == WIN_H-30:
+				self.pred_y = WIN_H - self.pred_y
+			self.next_check = 10
+		else:
+			self.next_check -= 1
+
+		if (self.y + PAD_H/2) + PAD_S1/2 < self.pred_y:
 			self.move_down()
-		elif self.y + PAD_H > ball.y:
+		elif (self.y + PAD_H/2) - PAD_S1/2 > self.pred_y:
 			self.move_up()
+
+
+
 
 
 class Paddle2:
@@ -81,7 +111,8 @@ class Ball:
 		self.x = x
 		self.y = y
 		self.check_delay = check_delay
-
+		# self.xvel = -6
+		# self.yvel = -30
 		global ball_vel
 		self.yvel = round(random.randint(0,ball_vel*100) / 200)
 
@@ -95,7 +126,7 @@ class Ball:
 		win.blit(Ball_img, (self.x, self.y))
 
 	def move(self):
-		if self.y < 30 or self.y > WIN_H - 30 - 2*BALL_SIZE:
+		if (self.y < 30 and self.yvel < 0) or (self.y > WIN_H - 30 - 2*BALL_SIZE and self.yvel > 0):
 			self.yvel = -self.yvel
 
 		mask = pygame.mask.from_surface(Ball_img)
@@ -106,11 +137,12 @@ class Ball:
 		pong1mask = paddle1.get_mask()
 
 		alpha = 0
-
+		global strokes
 		if self.check_delay == 0:
 
 			if mask.overlap(pong1mask, (paddle1.x-self.x, paddle1.y-self.y)):
-
+				print(ball_vel)
+				strokes += 1
 				section = PAD_H / 7
 				alphas = [-45, -30, -15, 0, 15, 30, 45]
 				for sect in range(7):
@@ -126,7 +158,8 @@ class Ball:
 				self.check_delay = check_delay
 
 			elif mask.overlap(pong2mask, (paddle2.x-self.x, paddle2.y-self.y)):
-
+				print(ball_vel)
+				strokes += 1
 				section = PAD_H / 7
 				alphas = [-45, -30, -15, 0, 15, 30, 45]
 				for sect in range(7):
@@ -162,8 +195,10 @@ clock = pygame.time.Clock()
 
 game_running = True
 while game_running:
+	ball_vel = ball_vel_start
+	strokes = 0
 	round_active = True
-	ball = Ball(900, 500)
+	ball = Ball(750, 500)
 	paddle1 = Paddle1(int((WIN_H - PAD_H)/2))
 	paddle2 = Paddle2(int((WIN_H - PAD_H)/2))
 
@@ -181,13 +216,16 @@ while game_running:
 		if keys[pygame.K_UP]:
 			paddle2.move_up()
 
-		if ball.x <= 0:
+		if ball.x <= -20:
 			scores[1] += 1
 			break
 
-		elif ball.x >= WIN_W:
+		elif ball.x >= WIN_W + 20:
 			scores[0] += 1
 			break
+		if strokes == 10 and ball_vel <= 32:
+			ball_vel += 1
+			strokes = 0
 
 		win.fill((0,0,0))
 
